@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head>
+    <script>
+      window.__ENV__ = {
+        FIREBASE_API_KEY: (document.currentScript?.dataset?.apiKey || ''),
+        FIREBASE_AUTH_DOMAIN: (document.currentScript?.dataset?.authDomain || ''),
+        FIREBASE_PROJECT_ID: (document.currentScript?.dataset?.projectId || ''),
+        FIREBASE_STORAGE_BUCKET: (document.currentScript?.dataset?.storageBucket || ''),
+        FIREBASE_MESSAGING_SENDER_ID: (document.currentScript?.dataset?.messagingSenderId || ''),
+        FIREBASE_APP_ID: (document.currentScript?.dataset?.appId || ''),
+        FIREBASE_MEASUREMENT_ID: (document.currentScript?.dataset?.measurementId || ''),
+      }
+    </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cindie – Learn English with AI</title>

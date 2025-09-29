@@ -1,3 +1,12 @@
+.env
+.env.*
+web/.env
+web/.env.*
+**/serviceAccountKey.json
+**/.DS_Store
+node_modules
+web/node_modules
+server/node_modules
 # Logs
 logs
 *.log
