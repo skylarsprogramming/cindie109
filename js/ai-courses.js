@@ -127,12 +127,104 @@
     try { localStorage.setItem(STORAGE_KEY_DASH, JSON.stringify(dash)); } catch (_) {}
     // try to sync to backend if available (non-blocking)
     try {
-      fetch('http://localhost:4000/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keepLearning: dash.keepLearning, subjects: dash.subjects, weeklyTarget: dash.weeklyTarget })
-      }).catch(()=>{});
+      const send = async () => {
+        try {
+          const idToken = localStorage.getItem('firebase_id_token');
+          await fetch('http://localhost:4000/api/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': idToken ? `Bearer ${idToken}` : undefined },
+            body: JSON.stringify({ keepLearning: dash.keepLearning, subjects: dash.subjects, weeklyTarget: dash.weeklyTarget })
+          });
+        } catch (_) {}
+      };
+      send();
     } catch (_) {}
+  }
+
+  async function tryRenderFromCourseExample() {
+    try {
+      const res = await fetch('./courseExample.json', { cache: 'no-store' });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const test = data?.test;
+      const passage = test?.reading_passage;
+      if (!passage) return false;
+
+      // Populate picker with a single entry for consistency with UI
+      populatePicker([{ title: passage.title || 'Reading Passage' }]);
+
+      // Title
+      const titleEl = document.getElementById('course-title') || document.querySelector('h1');
+      if (titleEl) titleEl.textContent = passage.title || 'Course Title';
+
+      // Lesson content: replace with reading passage
+      const lessonRoot = document.querySelector('.lesson');
+      if (lessonRoot) {
+        lessonRoot.innerHTML = '';
+        const article = document.createElement('article');
+        const h3 = document.createElement('h3');
+        h3.textContent = passage.title || 'Reading Passage';
+        const p = document.createElement('p');
+        p.textContent = passage.text || '';
+        const read = document.createElement('div');
+        read.className = 'read-cta';
+        read.setAttribute('data-tts', passage.text || '');
+        read.textContent = '🔊 Read out loud';
+        article.appendChild(h3);
+        article.appendChild(p);
+        article.appendChild(read);
+        lessonRoot.appendChild(article);
+        // Bind TTS to the new element
+        try {
+          if (typeof window.speak === 'function') {
+            read.addEventListener('click', () => window.speak(passage.text || ''));
+            read.title = 'The text can be read out loud for pronunciation assistance';
+          }
+        } catch (_) {}
+      }
+
+      // MCQs from JSON
+      const mcqSection = document.querySelector('.mcq');
+      if (mcqSection) {
+        mcqSection.innerHTML = '<h3 style="margin-top:0;">Questions</h3>';
+        const questions = Array.isArray(test?.questions) ? test.questions : [];
+        const pack = questions.map(q => {
+          const answers = Array.isArray(q.answer_choices) ? q.answer_choices : ['TRUE', 'FALSE', 'NOT GIVEN'];
+          let correctIndex = answers.indexOf(q.correct_answer);
+          if (correctIndex < 0) correctIndex = 0;
+          return { q: q.question, a: answers, correct: correctIndex };
+        });
+        pack.forEach((q, idx) => {
+          const block = document.createElement('div');
+          block.style.marginTop = idx === 0 ? '0' : '10px';
+          block.innerHTML = `<div class="auth-muted">${q.q || 'Choose the correct answer:'}</div>` +
+            (q.a || []).map((ans, i) => `<label data-idx="${idx}" data-answer="${i}"><input type="radio" name="q${idx+1}" style="display:none;" /> ${ans}</label>`).join('');
+          mcqSection.appendChild(block);
+        });
+        mcqSection.querySelectorAll('label').forEach(label => {
+          label.addEventListener('click', () => {
+            mcqSection.querySelectorAll('label').forEach(l => l.style.borderColor = 'var(--border)');
+            label.style.borderColor = 'var(--accent)';
+            const idx = Number(label.getAttribute('data-idx'));
+            const ans = Number(label.getAttribute('data-answer'));
+            const correct = pack[idx]?.correct ?? 0;
+            const isCorrect = ans === correct;
+            if (isCorrect) updateProgress(15, 8); else updateProgress(5, 2);
+            trackMcq(isCorrect, (pack[idx]?.q) || '');
+          });
+        });
+      }
+
+      // Clear vocab (no vocab in provided JSON)
+      const vocabRoot = document.querySelector('.vocab-list');
+      if (vocabRoot) {
+        vocabRoot.innerHTML = '';
+      }
+
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function populatePicker(courses) {
@@ -188,6 +280,11 @@
   }
 
   async function renderCoursePortal() {
+    // First, try to render from local JSON sample if available
+    const renderedFromSample = await tryRenderFromCourseExample();
+    if (renderedFromSample) return;
+
+    // Otherwise, proceed with generated courses
     const { courses } = await generateCoursesIfNeeded();
     populatePicker(courses);
     renderCourse(courses?.[0]);

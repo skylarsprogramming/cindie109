@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle } from 'lucide-react'
+import { getFirebase } from '@/lib/firebaseClient'
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -18,6 +20,12 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [csrfToken, setCsrfToken] = useState('')
+
+  // Fetch CSRF token on mount
+  useEffect(() => {
+    fetch('/api/csrf').then(r => r.json()).then(d => setCsrfToken(d?.csrfToken || '')).catch(()=>{})
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -47,6 +55,12 @@ export default function RegisterPage() {
 
     setIsLoading(true)
     try {
+      // Create in Firebase Auth
+      const { auth } = getFirebase()
+      const cred = await createUserWithEmailAndPassword(auth, formData.email.trim(), formData.password)
+      try { await sendEmailVerification(cred.user) } catch (_) {}
+
+      // Create in local Next backend for profile and future roles
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,7 +69,8 @@ export default function RegisterPage() {
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           age: Number(formData.age),
-          password: formData.password
+          password: formData.password,
+          csrfToken
         })
       })
       const data = await res.json()

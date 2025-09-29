@@ -1,24 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react'
+import { getFirebase } from '@/lib/firebaseClient'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 
 export default function LoginPage() {
   const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [csrfToken, setCsrfToken] = useState('')
+
+  // Fetch CSRF token on mount
+  useEffect(() => {
+    fetch('/api/csrf').then(r => r.json()).then(d => setCsrfToken(d?.csrfToken || '')).catch(()=>{})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     try {
+      // Firebase Auth sign-in (email used for usernameOrEmail in this flow)
+      const { auth } = getFirebase()
+      const cred = await signInWithEmailAndPassword(auth, usernameOrEmail, password)
+      const idToken = await cred.user.getIdToken()
+      try { localStorage.setItem('firebase_id_token', idToken) } catch (_) {}
+
+      // Sync cookie session
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usernameOrEmail, password })
+        body: JSON.stringify({ usernameOrEmail, password, csrfToken })
       })
       const data = await res.json()
       if (!res.ok) {

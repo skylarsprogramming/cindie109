@@ -1,27 +1,28 @@
 import { NextResponse } from 'next/server'
-import { readUsers, writeUsers, hashPassword, safeUser, UserRecord } from '@/lib/users'
+import { readUsers, writeUsers, hashPassword, safeUser, UserRecord, randomToken } from '@/lib/users'
+import { z } from 'zod'
 
 export async function POST(request: Request) {
   try {
+    const schema = z.object({
+      username: z.string().min(3).max(20).regex(/^[\w.-]+$/),
+      email: z.string().email(),
+      phone: z.string().min(7).max(20),
+      age: z.number().int().min(5).max(120),
+      password: z.string().min(8),
+    })
     const body = await request.json()
-    const { username, email, phone, age, password } = body || {}
-
-    if (!username || !email || !phone || !age || !password) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    const parsed = schema.safeParse({
+      username: body?.username,
+      email: body?.email,
+      phone: body?.phone,
+      age: Number(body?.age),
+      password: body?.password,
+    })
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
-    if (typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
-    }
-    if (!/^[\w.-]{3,20}$/.test(username)) {
-      return NextResponse.json({ error: 'Invalid username' }, { status: 400 })
-    }
-    if (!/^\+?[0-9\-\s]{7,15}$/.test(String(phone))) {
-      return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 })
-    }
-    const ageNum = Number(age)
-    if (!Number.isFinite(ageNum) || ageNum < 5 || ageNum > 120) {
-      return NextResponse.json({ error: 'Invalid age' }, { status: 400 })
-    }
+    const { username, email, phone, age, password } = parsed.data
 
     const db = await readUsers()
     const exists = db.users.find(u => u.username === username || u.email.toLowerCase() === String(email).toLowerCase())
@@ -35,15 +36,18 @@ export async function POST(request: Request) {
       username,
       email: String(email).toLowerCase(),
       phone: String(phone),
-      age: ageNum,
+      age: Number(age),
       passwordHash: hash,
       passwordSalt: salt,
+      roles: ['user'],
+      emailVerified: false,
       createdAt: new Date().toISOString()
     }
     db.users.push(record)
     await writeUsers(db)
 
-    return NextResponse.json({ user: safeUser(record) }, { status: 201 })
+    const verificationToken = randomToken(24)
+    return NextResponse.json({ user: safeUser(record), verify: { token: verificationToken } }, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
   }
