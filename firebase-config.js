@@ -1,15 +1,9 @@
-/**
- * Replace with your Firebase project config.
- * Firebase Console → Project settings → General → Your apps (Web app)
- */
 export const firebaseConfig = {
-  apiKey: "AIzaSyArzqnuBVsKMze69vUxjjN_gpj3MMWUGYw",
-  authDomain: "skylarscourse.com",
-  projectId: "cindie-1a36c",
-  storageBucket: "cindie-1a36c.appspot.com",
-  messagingSenderId: "733443242930",
-  appId: "1:733443242930:web:56bfa8d9aa95125a6542ab",
-  measurementId: "G-20NG6G27S6"
+  apiKey: "AIzaSyANaRqK0EPtstfd_4p3mwXhYSuswfRrDaA",
+  authDomain: "cindie-ai.firebaseapp.com",
+  projectId: "cindie-ai",
+  storageBucket: "cindie-ai.appspot.com",
+  messagingSenderId: "746851099847",
+  appId: "1:746851099847:web:2a1f662b3381cc3cd8cae2",
+  measurementId: "G-4QFTVE18KV"
 };
-
-
