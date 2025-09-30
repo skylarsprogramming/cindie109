@@ -271,6 +271,18 @@
       ];
       localStorage.setItem('cindie_recommendations', JSON.stringify(recs));
       localStorage.setItem('cindie_quiz_completed', '1');
+      
+      // Generate AI lesson via N8N
+      try {
+        if (window.n8nIntegration) {
+          console.log('Generating AI lesson via N8N...');
+          const lesson = await window.n8nIntegration.generateLesson(result);
+          console.log('AI lesson generated:', lesson);
+        }
+      } catch (error) {
+        console.error('N8N lesson generation failed:', error);
+      }
+      
       // Send to backend profile
       fetch('http://localhost:4000/api/placement/complete', {
         method: 'POST',
@@ -335,6 +347,11 @@
     `;
     const retake = document.getElementById('retake');
     retake?.addEventListener('click', () => {
+      // Clear AI lesson for fresh generation
+      if (window.n8nIntegration) {
+        window.n8nIntegration.clearStoredLesson();
+      }
+      
       // Reset state and restart
       currentIndex = 0; asked = 0; usedIds.clear();
       difficultyBySkill.grammar = 2; difficultyBySkill.reading = 2; difficultyBySkill.listening = 2;

@@ -23,6 +23,15 @@
     return;
   }
 
+  // Check if we have an AI-generated lesson from N8N
+  if (window.n8nIntegration) {
+    const aiLesson = window.n8nIntegration.loadStoredLesson();
+    if (aiLesson) {
+      console.log('Displaying AI-generated lesson:', aiLesson);
+      return; // N8N integration will handle the display
+    }
+  }
+
   async function fetchServerCourse() {
     const token = await authToken();
     if (!token) return null;
