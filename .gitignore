@@ -1,12 +1,51 @@
+# Environment variables and secrets
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 web/.env
 web/.env.*
+server/.env
+server/.env.*
+
+# Firebase and API keys
 **/serviceAccountKey.json
+**/firebase-service-account.json
+**/google-services.json
+**/GoogleService-Info.plist
+firebase-config.js
+web/src/firebase/config.js
+webhookToCursor.js
+
+# Database and user data
+users.db.json
+**/users.db.json
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# API keys and secrets (common patterns)
+**/config.js
+**/secrets.js
+**/keys.js
+**/*secret*
+**/*key*
+**/*token*
+**/*credential*
+
+# Build outputs and temp files
 **/.DS_Store
-node_modules
-web/node_modules
-server/node_modules
+**/Thumbs.db
+**/desktop.ini
+node_modules/
+web/node_modules/
+server/node_modules/
+dist/
+build/
+.next/
+out/
 # Logs
 logs
 *.log
