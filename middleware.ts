@@ -5,8 +5,8 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl
   const token = request.cookies.get('auth_token')?.value
 
-  // Protect dashboard
-  if (url.pathname.startsWith('/dashboard')) {
+  // Protect dashboard and profile routes
+  if (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/profile')) {
     if (!token) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', url.pathname)
@@ -18,7 +18,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*']
+  matcher: ['/dashboard/:path*', '/profile/:path*']
 }
 
 

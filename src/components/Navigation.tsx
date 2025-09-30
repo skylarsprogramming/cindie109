@@ -1,12 +1,35 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { BookOpen, Gamepad2, Mic, BarChart3, Home } from 'lucide-react'
+import { BookOpen, Gamepad2, Mic, BarChart3, Home, User, LogOut } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { getFirebase } from '@/lib/firebaseClient'
 
 const Navigation = () => {
   const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
+  useEffect(() => {
+    const { auth } = getFirebase()
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      setUser(firebaseUser)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      const { auth } = getFirebase()
+      await auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -63,6 +86,67 @@ const Navigation = () => {
                 </Link>
               )
             })}
+          </div>
+
+          {/* User Menu */}
+          <div className="flex items-center space-x-4">
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 p-2 rounded-lg text-gray-300 hover:text-white hover:bg-dark-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-r from-neon-pink to-neon-blue rounded-full flex items-center justify-center">
+                    <span className="text-white font-medium text-sm">
+                      {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <span className="hidden lg:block font-medium">
+                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  </span>
+                </button>
+
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 mt-2 w-48 bg-dark-100 border border-gray-700 rounded-lg shadow-lg py-1 z-50"
+                  >
+                    <Link
+                      href="/profile"
+                      className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-dark-200 transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profile</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 w-full px-4 py-2 text-gray-300 hover:text-white hover:bg-dark-200 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 text-gray-300 hover:text-white hover:bg-dark-100 rounded-lg transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 bg-gradient-to-r from-neon-pink to-neon-blue text-white rounded-lg hover:opacity-90 transition-opacity"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
