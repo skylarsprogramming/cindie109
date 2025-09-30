@@ -15,18 +15,64 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
 } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import { firebaseConfig } from './firebase-config.js';
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import { firebaseConfig } from './js/firebase-config.js';
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+const db = getFirestore(app);
 auth.useDeviceLanguage();
 
 export async function registerEmailPassword(email, password) {
-  return await createUserWithEmailAndPassword(auth, email, password);
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  try {
+    const userRef = doc(db, 'users', cred.user.uid);
+    const existing = await getDoc(userRef);
+    if (!existing.exists()) {
+      await setDoc(userRef, {
+        uid: cred.user.uid,
+        email: cred.user.email || email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        profile: {
+          displayName: cred.user.displayName || null,
+          photoURL: cred.user.photoURL || null,
+        },
+        providers: cred.user.providerData.map(p => p.providerId),
+        roles: ['user'],
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to create user profile in Firestore:', e);
+  }
+  return cred;
 }
 
 export async function loginEmailPassword(email, password) {
-  return await signInWithEmailAndPassword(auth, email, password);
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  try {
+    const userRef = doc(db, 'users', cred.user.uid);
+    const existing = await getDoc(userRef);
+    if (!existing.exists()) {
+      await setDoc(userRef, {
+        uid: cred.user.uid,
+        email: cred.user.email || email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        profile: {
+          displayName: cred.user.displayName || null,
+          photoURL: cred.user.photoURL || null,
+        },
+        providers: cred.user.providerData.map(p => p.providerId),
+        roles: ['user'],
+      });
+    } else {
+      await setDoc(userRef, { updatedAt: serverTimestamp() }, { merge: true });
+    }
+  } catch (e) {
+    console.warn('Failed to upsert user profile in Firestore:', e);
+  }
+  return cred;
 }
 
 export async function logout() {
@@ -45,7 +91,30 @@ export { onAuthStateChanged };
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  return await signInWithPopup(auth, provider);
+  const cred = await signInWithPopup(auth, provider);
+  try {
+    const userRef = doc(db, 'users', cred.user.uid);
+    const existing = await getDoc(userRef);
+    if (!existing.exists()) {
+      await setDoc(userRef, {
+        uid: cred.user.uid,
+        email: cred.user.email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        profile: {
+          displayName: cred.user.displayName || null,
+          photoURL: cred.user.photoURL || null,
+        },
+        providers: cred.user.providerData.map(p => p.providerId),
+        roles: ['user'],
+      });
+    } else {
+      await setDoc(userRef, { updatedAt: serverTimestamp() }, { merge: true });
+    }
+  } catch (e) {
+    console.warn('Failed to upsert user profile in Firestore:', e);
+  }
+  return cred;
 }
 
 // Email verification helpers

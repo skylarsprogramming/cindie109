@@ -23,12 +23,8 @@
     const formEl = document.getElementById('signup-form');
     const statusEl = document.getElementById('status');
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // After first registration, go to dashboard (courses locked until quiz)
-        window.location.href = 'dashboard.html';
-      }
-    });
+    // Remove auto-redirect on auth state change for security
+    // Users must complete proper sign-up flow
 
     formEl?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -55,10 +51,20 @@
       submitBtn.textContent = 'Creating account...';
       try {
         await registerEmailPassword(email, password);
-        try { await sendVerificationEmail(); } catch (_) {}
+        await sendVerificationEmail();
+        
+        // Sign out user immediately after registration for security
+        await auth.signOut();
+        
         trackEvent('sign_up', { method: 'email' });
-        statusEl.textContent = 'Verification email sent. Please verify and then log in.';
+        statusEl.textContent = 'Account created! Please check your email and click the verification link, then log in.';
         statusEl.className = 'success';
+        
+        // Redirect to login after successful signup
+        setTimeout(() => {
+          window.location.href = 'login.html?message=Please verify your email and log in.';
+        }, 3000);
+        
       } catch (err) {
         statusEl.textContent = err?.message || 'Sign up failed';
         statusEl.className = 'error';
@@ -77,10 +83,28 @@
       const btn = document.getElementById('google-signup');
       btn.disabled = true; btn.textContent = 'Signing in...';
       try {
-        await signInWithGoogle();
-        identifyUser(auth.currentUser?.uid);
-        trackEvent('sign_up', { method: 'google' });
-        window.location.href = 'dashboard.html';
+        const result = await signInWithGoogle();
+        
+        // Check if this is a new user (first time Google sign-in)
+        if (result.additionalUserInfo?.isNewUser) {
+          // New user - send verification email even for Google users
+          await sendVerificationEmail();
+          identifyUser(auth.currentUser?.uid);
+          trackEvent('sign_up', { method: 'google' });
+          statusEl.textContent = 'Account created! Please verify your email before continuing.';
+          statusEl.className = 'success';
+          
+          // Sign out and redirect to login for verification
+          await auth.signOut();
+          setTimeout(() => {
+            window.location.href = 'login.html?message=Please verify your email and log in.';
+          }, 3000);
+        } else {
+          // Existing user - proceed normally
+          identifyUser(auth.currentUser?.uid);
+          trackEvent('login', { method: 'google' });
+          window.location.href = 'dashboard.html';
+        }
       } catch (err) {
         statusEl.textContent = err?.message || 'Google sign-in failed';
         statusEl.className = 'error';

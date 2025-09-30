@@ -18,7 +18,7 @@
   <script type="module">
     import { auth, loginEmailPassword, onAuthStateChanged } from './auth.js';
     import { trackEvent, identifyUser } from './analytics.js';
-    import { signInWithGoogle, reloadUser, isEmailVerified, resetPasswordEmail, setRememberPersistence } from './auth.js';
+    import { signInWithGoogle, reloadUser, isEmailVerified, resetPasswordEmail, setRememberPersistence, sendVerificationEmail } from './auth.js';
 
     const statusEl = document.getElementById('status');
     const emailForm = document.getElementById('email-form');
@@ -45,12 +45,16 @@
       pw.type = pw.type === 'password' ? 'text' : 'password';
     });
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // Always land on dashboard; course start will enforce quiz
-        window.location.href = 'dashboard.html';
-      }
-    });
+    // Remove auto-redirect on auth state change for security
+    // Users must complete proper login flow with email verification
+    
+    // Check for URL parameters and display messages
+    const urlParams = new URLSearchParams(window.location.search);
+    const message = urlParams.get('message');
+    if (message) {
+      statusEl.textContent = decodeURIComponent(message);
+      statusEl.className = 'success';
+    }
 
     emailForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -64,11 +68,36 @@
         await setRememberPersistence(!!remember);
         await loginEmailPassword(email, password);
         await reloadUser();
+        
+        // Strict email verification check
         if (!isEmailVerified()) {
-          statusEl.textContent = 'Please verify your email before logging in.';
+          // Sign out user if email is not verified
+          await auth.signOut();
+          statusEl.textContent = 'Please verify your email before logging in. Check your inbox for the verification link.';
           statusEl.className = 'error';
+          
+          // Show resend verification button
+          const resendBtn = document.createElement('button');
+          resendBtn.textContent = 'Resend Verification Email';
+          resendBtn.className = 'btn ghost';
+          resendBtn.style.marginTop = '8px';
+          resendBtn.onclick = async () => {
+            try {
+              await loginEmailPassword(email, password);
+              await sendVerificationEmail();
+              await auth.signOut();
+              statusEl.textContent = 'Verification email sent! Please check your inbox.';
+              statusEl.className = 'success';
+              resendBtn.remove();
+            } catch (err) {
+              statusEl.textContent = 'Failed to resend verification email.';
+              statusEl.className = 'error';
+            }
+          };
+          statusEl.parentNode.insertBefore(resendBtn, statusEl.nextSibling);
           return;
         }
+        
         identifyUser(auth.currentUser?.uid);
         trackEvent('login', { method: 'password' });
         window.location.href = 'dashboard.html';
@@ -88,7 +117,27 @@
       const btn = document.getElementById('google-login');
       btn.disabled = true; btn.textContent = 'Signing in...';
       try {
-        await signInWithGoogle();
+        const result = await signInWithGoogle();
+        
+        // Check if this is a new user
+        if (result.additionalUserInfo?.isNewUser) {
+          // New user - require email verification
+          await sendVerificationEmail();
+          await auth.signOut();
+          statusEl.textContent = 'Account created! Please verify your email before continuing.';
+          statusEl.className = 'error';
+          return;
+        }
+        
+        // Existing user - check email verification
+        await reloadUser();
+        if (!isEmailVerified()) {
+          await auth.signOut();
+          statusEl.textContent = 'Please verify your email before logging in.';
+          statusEl.className = 'error';
+          return;
+        }
+        
         identifyUser(auth.currentUser?.uid);
         trackEvent('login', { method: 'google' });
         window.location.href = 'dashboard.html';

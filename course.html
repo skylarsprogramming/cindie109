@@ -31,8 +31,6 @@
         <a href="./index.html" class="brand-name" style="text-decoration:none;color:inherit" data-i18n="brand">CINDIE</a>
       </div>
       <nav class="nav">
-        <a href="./games.html" data-i18n="nav_games">Games</a>
-        <a href="./pronunciation.html" data-i18n="nav_pronunciation">Pronunciation</a>
       </nav>
     </div>
   </header>
@@ -50,6 +48,17 @@
   <script src="./js/ai.js"></script>
   <script src="./js/i18n.js"></script>
   <script type="module" src="./js/n8n-integration.js"></script>
+  <script type="module">
+    import authGuard from './js/auth-guard.js';
+    
+    // Protect the course page
+    authGuard.showAuthLoading();
+    const canAccess = await authGuard.protectPage();
+    if (!canAccess) {
+      return; // Will redirect to login
+    }
+    authGuard.hideAuthLoading();
+  </script>
   <script src="./js/course.js"></script>
 </body>
 </html>
