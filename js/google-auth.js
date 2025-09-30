@@ -115,8 +115,8 @@ export { auth, provider };
         console.warn('Failed to upsert user profile after redirect:', e);
       }
 
-      // Redirect to dashboard
-      window.location.href = '/dashboard';
+      // Redirect to dashboard.html (works on GitHub Pages and subpaths)
+      window.location.href = 'dashboard.html';
     }
   } catch (e) {
     // Ignore when no redirect result is available

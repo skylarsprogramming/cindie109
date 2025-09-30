@@ -111,43 +111,7 @@
 
     // Phone-based login handlers removed
 
-    // Google sign-in
-    document.getElementById('google-login')?.addEventListener('click', async () => {
-      statusEl.textContent = '';
-      const btn = document.getElementById('google-login');
-      btn.disabled = true; btn.textContent = 'Signing in...';
-      try {
-        const result = await signInWithGoogle();
-        
-        // Check if this is a new user
-        if (result.additionalUserInfo?.isNewUser) {
-          // New user - require email verification
-          await sendVerificationEmail();
-          await auth.signOut();
-          statusEl.textContent = 'Account created! Please verify your email before continuing.';
-          statusEl.className = 'error';
-          return;
-        }
-        
-        // Existing user - check email verification
-        await reloadUser();
-        if (!isEmailVerified()) {
-          await auth.signOut();
-          statusEl.textContent = 'Please verify your email before logging in.';
-          statusEl.className = 'error';
-          return;
-        }
-        
-        identifyUser(auth.currentUser?.uid);
-        trackEvent('login', { method: 'google' });
-        window.location.href = 'dashboard.html';
-      } catch (err) {
-        statusEl.textContent = err?.message || 'Google sign-in failed';
-        statusEl.className = 'error';
-      } finally {
-        btn.disabled = false; btn.textContent = 'Continue with Google';
-      }
-    });
+    // Google button handler is provided by js/google-auth.js to avoid duplicate listeners
 
     // Forgot via email
     forgotEmailBtn?.addEventListener('click', async () => {
