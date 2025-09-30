@@ -1,6 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-import { firebaseConfig } from '../firebase-config.js';
+
+// Firebase config from your project
+const firebaseConfig = {
+  apiKey: "AIzaSyANaRqK0EPtstfd_4p3mwXhYSuswfRrDaA",
+  authDomain: "cindie-ai.firebaseapp.com",
+  projectId: "cindie-ai",
+  storageBucket: "cindie-ai.appspot.com",
+  messagingSenderId: "746851099847",
+  appId: "1:746851099847:web:2a1f662b3381cc3cd8cae2",
+  measurementId: "G-4QFTVE18KV"
+};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

@@ -15,6 +15,7 @@ server/.env.*
 **/firebase-service-account.json
 **/google-services.json
 **/GoogleService-Info.plist
+**/*firebase-adminsdk*.json
 firebase-config.js
 web/src/firebase/config.js
 webhookToCursor.js

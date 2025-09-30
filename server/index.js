@@ -8,20 +8,24 @@ dotenv.config();
 
 if (!admin.apps.length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    });
-  } catch (e) {
-    const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './serviceAccountKey.json';
-    if (!fs.existsSync(keyPath)) {
-      console.error('Firebase Admin failed to initialize. Provide credentials via GOOGLE_APPLICATION_CREDENTIALS or serviceAccountKey.json.');
-      console.error(String(e));
-      process.exit(1);
+    // Try to use the service account file in the root directory
+    const keyPath = './cindie-ai-firebase-adminsdk-fbsvc-0d1e7b197a.json';
+    if (fs.existsSync(keyPath)) {
+      const serviceAccountJson = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccountJson),
+      });
+      console.log('Firebase Admin initialized with service account');
+    } else {
+      // Fallback to environment variable or default credentials
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+      });
+      console.log('Firebase Admin initialized with default credentials');
     }
-    const serviceAccountJson = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccountJson),
-    });
+  } catch (e) {
+    console.error('Firebase Admin failed to initialize:', e.message);
+    process.exit(1);
   }
 }
 
